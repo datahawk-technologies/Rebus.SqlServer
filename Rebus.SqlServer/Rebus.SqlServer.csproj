@@ -42,7 +42,8 @@
     <None Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="rebus" Version="6.0.0" />
+    <PackageReference Include="Polly" Version="7.2.0" />
+    <PackageReference Include="rebus" Version="6.1.0" />
   </ItemGroup>
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
     <PackageReference Include="System.Data.Common" Version="4.3.0" />
@@ -53,6 +54,9 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Transactions" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="SqlServer\Transport\Retry\" />
   </ItemGroup>
   <Target BeforeTargets="PreBuildEvent" Name="PreBuild">
     <Exec Command="$(ProjectDir)..\scripts\patch_assemblyinfo.cmd $(ProjectDir)" />
