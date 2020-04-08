@@ -25,7 +25,7 @@ namespace Rebus.Config
         /// <param name="configurer">Static to extend</param>
         /// <param name="transportOptions">Options controlling the transport setup</param>
         /// <param name="inputQueueName">Queue name to process messages from</param>
-        public static SqlServerLeaseTransportOptions UseSqlServerInLeaseMode(this StandardConfigurer<ITransport> configurer, SqlServerLeaseTransportOptions transportOptions, string inputQueueName)
+        public static SqlServerLeaseTransportOptions UseSqlServerInResilientLeaseMode(this StandardConfigurer<ITransport> configurer, SqlServerLeaseTransportOptions transportOptions, string inputQueueName)
         {
             return SqlServerTransportConfigurationExtensions.Configure(
                     configurer,
