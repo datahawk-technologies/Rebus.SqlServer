@@ -409,7 +409,6 @@ WHERE	id = @id
             readonly long _messageId;
             readonly IDbConnectionProvider _connectionProvider;
             readonly TimeSpan _leaseInterval;
-            Task _renewTimer;
             bool _stopRequired;
 
             public AutomaticLeaseRenewer(SqlServerLeaseTransport serverLeaseTransport, string tableName, long messageId, IDbConnectionProvider connectionProvider, TimeSpan renewInterval, TimeSpan leaseInterval, CancellationToken cancellationToken)
@@ -420,9 +419,9 @@ WHERE	id = @id
                 _connectionProvider = connectionProvider;
                 _leaseInterval = leaseInterval;
 
-                _renewTimer = Task.Run(async () =>
+                Task.Run(async () =>
                {
-                   while (!cancellationToken.IsCancellationRequested || !_stopRequired)
+                   while (!cancellationToken.IsCancellationRequested && !_stopRequired)
                    {
                        await Task.Delay(renewInterval, cancellationToken);
                        if (!_stopRequired)
@@ -436,8 +435,6 @@ WHERE	id = @id
             public void Dispose()
             {
                 _stopRequired = true;
-                _renewTimer?.Dispose();
-                _renewTimer = null;
             }
 
             async Task RenewLease(CancellationToken cancellationToken)
