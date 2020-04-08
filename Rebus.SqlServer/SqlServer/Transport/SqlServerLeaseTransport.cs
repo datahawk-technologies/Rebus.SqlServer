@@ -273,6 +273,13 @@ END
                 }
             );
 
+            cancellationToken.Register(() =>
+            {
+                renewal?.Dispose();
+
+                AsyncHelpers.RunSync(() => UpdateLease(ConnectionProvider, ReceiveTableName.QualifiedName, messageId, null, cancellationToken));
+            });
+
             context.OnCommitted(
                 async ctx =>
                 {
