@@ -257,10 +257,10 @@ END
         /// <param name="cancellationToken">Token to abort processing</param>
         private void ApplyTransactionSemantics(ITransactionContext context, long messageId, CancellationToken cancellationToken)
         {
-            AutomaticLeaseRenewer renewal = null;
+            IDisposable renewal = null;
             if (_automaticLeaseRenewal == true)
             {
-                renewal = new AutomaticLeaseRenewer(
+                renewal = new AutomaticLeaseRenewerTimer(
                     this, ReceiveTableName.QualifiedName, messageId, ConnectionProvider, _automaticLeaseRenewalInterval, _leaseInterval, cancellationToken);
             }
 
@@ -272,13 +272,6 @@ END
                     AsyncHelpers.RunSync(() => UpdateLease(ConnectionProvider, ReceiveTableName.QualifiedName, messageId, null, cancellationToken));
                 }
             );
-
-            cancellationToken.Register(() =>
-            {
-                renewal?.Dispose();
-
-                AsyncHelpers.RunSync(() => UpdateLease(ConnectionProvider, ReceiveTableName.QualifiedName, messageId, null, cancellationToken));
-            });
 
             context.OnCommitted(
                 async ctx =>
@@ -442,6 +435,45 @@ WHERE	id = @id
                 await _serverLeaseTransport.UpdateLease(_connectionProvider, _tableName, _messageId, _leaseInterval, cancellationToken).ConfigureAwait(false);
             }
         }
+
+        /// <summary>
+        /// Handles automatically renewing a lease for a given message
+        /// </summary>
+        class AutomaticLeaseRenewerTimer : IDisposable
+        {
+            private readonly SqlServerLeaseTransport _serverLeaseTransport;
+            readonly string _tableName;
+            readonly long _messageId;
+            readonly IDbConnectionProvider _connectionProvider;
+            readonly TimeSpan _leaseInterval;
+            readonly CancellationToken _cancellationToken;
+            Timer _renewTimer;
+
+            public AutomaticLeaseRenewerTimer(SqlServerLeaseTransport serverLeaseTransport, string tableName, long messageId, IDbConnectionProvider connectionProvider, TimeSpan renewInterval, TimeSpan leaseInterval, CancellationToken cancellationToken)
+            {
+                _serverLeaseTransport = serverLeaseTransport;
+                _tableName = tableName;
+                _messageId = messageId;
+                _connectionProvider = connectionProvider;
+                _leaseInterval = leaseInterval;
+                _cancellationToken = cancellationToken;
+                _renewTimer = new Timer(RenewLease, null, renewInterval, renewInterval);
+            }
+
+
+            public void Dispose()
+            {
+                _renewTimer?.Change(TimeSpan.FromMilliseconds(-1), TimeSpan.FromMilliseconds(-1));
+                _renewTimer?.Dispose();
+                _renewTimer = null;
+            }
+
+            void RenewLease(object state)
+            {
+                AsyncHelpers.RunSync(() => _serverLeaseTransport.UpdateLease(_connectionProvider, _tableName, _messageId, _leaseInterval, _cancellationToken));
+            }
+        }
+
 
         class AddressedTransportMessage
         {

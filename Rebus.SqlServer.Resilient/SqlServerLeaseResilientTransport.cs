@@ -23,9 +23,10 @@ namespace Rebus.SqlServer.Transport.Resilient
         };
 
         private static readonly AsyncRetryPolicy RetryPolicy = Policy
-                                                     .Handle<SqlException>(SqlServerTransientExceptionDetector.ShouldRetryOn)
-                                                     .Or<TimeoutException>()
-                                                     .OrInner<Win32Exception>(SqlServerTransientExceptionDetector.ShouldRetryOn)
+                                                     .Handle<Exception>()
+                                                     //.Handle<SqlException>(SqlServerTransientExceptionDetector.ShouldRetryOn)
+                                                     //.Or<TimeoutException>()
+                                                     //.OrInner<Win32Exception>(SqlServerTransientExceptionDetector.ShouldRetryOn)
                                                      .WaitAndRetryAsync(RetryTimes);
         public SqlServerLeaseResilientTransport(IDbConnectionProvider connectionProvider, string inputQueueName, IRebusLoggerFactory rebusLoggerFactory, IAsyncTaskFactory asyncTaskFactory, IRebusTime rebusTime, TimeSpan leaseInterval, TimeSpan? leaseTolerance, Func<string> leasedByFactory, SqlServerLeaseTransportOptions options) : base(connectionProvider, inputQueueName, rebusLoggerFactory, asyncTaskFactory, rebusTime, leaseInterval, leaseTolerance, leasedByFactory, options)
         {
