@@ -38,8 +38,6 @@ if %ERRORLEVEL% neq 0 (
  	goto exit_fail
 )
 
-call scripts\push.cmd "%version%"
-
 popd
 
 
