@@ -268,8 +268,14 @@ END
                 ctx =>
                 {
                     renewal?.Dispose();
-
-                    AsyncHelpers.RunSync(() => UpdateLease(ConnectionProvider, ReceiveTableName.QualifiedName, messageId, null, cancellationToken));
+                    try
+                    {
+                        AsyncHelpers.RunSync(() => UpdateLease(ConnectionProvider, ReceiveTableName.QualifiedName, messageId, null, cancellationToken));
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.Error(ex, "While Renewing Lease");
+                    }
                 }
             );
 
@@ -277,8 +283,14 @@ END
                 async ctx =>
                 {
                     renewal?.Dispose();
-
-                    await DeleteMessage(messageId, cancellationToken);
+                    try
+                    {
+                        await DeleteMessage(messageId, cancellationToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.Error(ex, "While Renewing Lease");
+                    }
                 }
             );
         }
@@ -470,7 +482,14 @@ WHERE	id = @id
 
             void RenewLease(object state)
             {
-                AsyncHelpers.RunSync(() => _serverLeaseTransport.UpdateLease(_connectionProvider, _tableName, _messageId, _leaseInterval, _cancellationToken));
+                try
+                {
+                    AsyncHelpers.RunSync(() => _serverLeaseTransport.UpdateLease(_connectionProvider, _tableName, _messageId, _leaseInterval, _cancellationToken));
+                }
+                catch (Exception ex)
+                {
+                    _serverLeaseTransport._log.Error(ex, "While Renewing Lease");
+                }
             }
         }
 

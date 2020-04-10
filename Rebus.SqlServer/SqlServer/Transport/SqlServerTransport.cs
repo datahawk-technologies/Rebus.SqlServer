@@ -65,7 +65,7 @@ namespace Rebus.SqlServer.Transport
         protected readonly TableName ReceiveTableName;
 
         readonly AsyncBottleneck _bottleneck = new AsyncBottleneck(20);
-        readonly ILog _log;
+        protected readonly ILog _log;
         readonly IAsyncTask _expiredMessagesCleanupTask;
         readonly bool _autoDeleteQueue;
         bool _disposed;
