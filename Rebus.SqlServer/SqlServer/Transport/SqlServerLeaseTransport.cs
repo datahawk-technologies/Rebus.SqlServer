@@ -139,7 +139,7 @@ namespace Rebus.SqlServer.Transport
 	AND		M.[expiration] > sysdatetimeoffset()
 	AND		1 = CASE
 					WHEN M.[leaseduntil] is null then 1
-					WHEN DATEADD(ms, @leasetolerancemilliseconds, DATEADD(ss, @leasetolerancetotalseconds, M.[leaseduntil])) < sysdatetimeoffset() THEN 1
+					WHEN DATEADD(ms, @leasetolerancemilliseconds, DATEADD(ss, @leasetolerancetotalseconds, M.[leaseduntil])) < sysdatetime() THEN 1
 					ELSE 0
 				END
 	ORDER
@@ -148,8 +148,8 @@ namespace Rebus.SqlServer.Transport
 			[id] ASC
 )
 UPDATE	TopCTE WITH (ROWLOCK, READCOMMITTEDLOCK)
-SET		[leaseduntil] = DATEADD(ms, @leasemilliseconds, DATEADD(ss, @leasetotalseconds, sysdatetimeoffset())),
-		[leasedat] = sysdatetimeoffset(),
+SET		[leaseduntil] = DATEADD(ms, @leasemilliseconds, DATEADD(ss, @leasetotalseconds, sysdatetime())),
+		[leasedat] = sysdatetime(),
 		[leasedby] = @leasedby
 OUTPUT	inserted.*";
                     selectCommand.Parameters.Add("@leasetotalseconds", SqlDbType.Int).Value = (int)_leaseInterval.TotalSeconds;
