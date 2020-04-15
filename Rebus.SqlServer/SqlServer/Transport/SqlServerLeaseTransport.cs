@@ -260,7 +260,7 @@ END
             IDisposable renewal = null;
             if (_automaticLeaseRenewal == true)
             {
-                renewal = new AutomaticLeaseRenewerTimer(
+                renewal = new AutomaticLeaseRenewer(
                     this, ReceiveTableName.QualifiedName, messageId, ConnectionProvider, _automaticLeaseRenewalInterval, _leaseInterval, cancellationToken);
             }
 
@@ -376,7 +376,7 @@ WHERE	id = @id
                     {
                         command.CommandText = $@"
 UPDATE	{tableName} WITH (ROWLOCK)
-SET		leaseduntil =	dateadd(ms, @leaseintervalmilliseconds, dateadd(ss, @leaseintervaltotalseconds, sysdatetimeoffset())),
+SET		leaseduntil =	dateadd(ms, @leaseintervalmilliseconds, dateadd(ss, @leaseintervaltotalseconds, sysdatetime())),
 		leasedby	=	leasedby,
 		leasedat	=	leasedat
 WHERE	id = @id
@@ -403,7 +403,6 @@ WHERE	id = @id
                 await connection.Complete();
             }
         }
-
         /// <summary>
         /// Handles automatically renewing a lease for a given message
         /// </summary>
@@ -414,54 +413,10 @@ WHERE	id = @id
             readonly long _messageId;
             readonly IDbConnectionProvider _connectionProvider;
             readonly TimeSpan _leaseInterval;
-            bool _stopRequired;
-
-            public AutomaticLeaseRenewer(SqlServerLeaseTransport serverLeaseTransport, string tableName, long messageId, IDbConnectionProvider connectionProvider, TimeSpan renewInterval, TimeSpan leaseInterval, CancellationToken cancellationToken)
-            {
-                _serverLeaseTransport = serverLeaseTransport;
-                _tableName = tableName;
-                _messageId = messageId;
-                _connectionProvider = connectionProvider;
-                _leaseInterval = leaseInterval;
-
-                Task.Run(async () =>
-               {
-                   while (!cancellationToken.IsCancellationRequested && !_stopRequired)
-                   {
-                       await Task.Delay(renewInterval, cancellationToken);
-                       if (!_stopRequired)
-                       {
-                           await RenewLease(cancellationToken);
-                       }
-                   }
-               }, cancellationToken);
-            }
-
-            public void Dispose()
-            {
-                _stopRequired = true;
-            }
-
-            async Task RenewLease(CancellationToken cancellationToken)
-            {
-                await _serverLeaseTransport.UpdateLease(_connectionProvider, _tableName, _messageId, _leaseInterval, cancellationToken).ConfigureAwait(false);
-            }
-        }
-
-        /// <summary>
-        /// Handles automatically renewing a lease for a given message
-        /// </summary>
-        class AutomaticLeaseRenewerTimer : IDisposable
-        {
-            private readonly SqlServerLeaseTransport _serverLeaseTransport;
-            readonly string _tableName;
-            readonly long _messageId;
-            readonly IDbConnectionProvider _connectionProvider;
-            readonly TimeSpan _leaseInterval;
             readonly CancellationToken _cancellationToken;
             Timer _renewTimer;
 
-            public AutomaticLeaseRenewerTimer(SqlServerLeaseTransport serverLeaseTransport, string tableName, long messageId, IDbConnectionProvider connectionProvider, TimeSpan renewInterval, TimeSpan leaseInterval, CancellationToken cancellationToken)
+            public AutomaticLeaseRenewer(SqlServerLeaseTransport serverLeaseTransport, string tableName, long messageId, IDbConnectionProvider connectionProvider, TimeSpan renewInterval, TimeSpan leaseInterval, CancellationToken cancellationToken)
             {
                 _serverLeaseTransport = serverLeaseTransport;
                 _tableName = tableName;
@@ -480,11 +435,11 @@ WHERE	id = @id
                 _renewTimer = null;
             }
 
-            void RenewLease(object state)
+            async void RenewLease(object state)
             {
                 try
                 {
-                    AsyncHelpers.RunSync(() => _serverLeaseTransport.UpdateLease(_connectionProvider, _tableName, _messageId, _leaseInterval, _cancellationToken));
+                    await _serverLeaseTransport.UpdateLease(_connectionProvider, _tableName, _messageId, _leaseInterval, _cancellationToken);
                 }
                 catch (Exception ex)
                 {
